@@ -3,7 +3,6 @@
 set -euo pipefail
 
 # Constants
-readonly SCRIPT_ALIAS_NAME="cursor-setup"
 readonly APPIMAGES_DIR="$HOME/.local/bin/appimages"
 readonly ICON_DIR="$HOME/.local/share/icons"
 # USER_DESKTOP_FILE and CURSOR_WEBSITE will be used in future versions
@@ -15,7 +14,6 @@ readonly SPINNER="${SPINNERS[0]}"
 readonly DEPENDENCIES=("gum" "curl" "wget" "pv" "bc" "find:findutils" "chmod:coreutils" "timeout:coreutils" "mkdir:coreutils" "apparmor_parser:apparmor-utils" "dbus-launch:dbus-x11" "libfuse2")
 readonly SYSTEM_DESKTOP_FILE="$HOME/.local/share/applications/cursor.desktop"
 readonly APPARMOR_PROFILE="/etc/apparmor.d/cursor-appimage"
-readonly RC_FILES=("bash:$HOME/.bashrc" "zsh:$HOME/.zshrc")
 SCRIPT_PATH="$HOME/cursor-setup-wizard/cursor_setup.sh"
 ## Colors used for UI feedback and styling
 readonly CLR_SCS="#16FF15"
@@ -74,47 +72,6 @@ validate_os() {
   logg success "$(echo -e "Detected $os_name (Ubuntu or derivative). System is compatible.")"
 }
 
-install_script_alias() {
-  local alias_command="alias ${SCRIPT_ALIAS_NAME}=\"$SCRIPT_PATH\"" 
-  local alias_added=false
-  
-  for entry in "${RC_FILES[@]}"; do
-    local shell_name="${entry%%:*}" 
-    local rc_file="${entry#*:}"
-    
-    if [[ -f "$rc_file" ]]; then
-      # Add AppImages directory to PATH
-      if ! grep -q "export PATH=\"\$PATH:$APPIMAGES_DIR\"" "$rc_file"; then
-        echo -e "\n# Add AppImages directory to PATH\nexport PATH=\"\$PATH:$APPIMAGES_DIR\"" >> "$rc_file"
-      fi
-      
-      # Add alias
-      if ! grep -Fxq "$alias_command" "$rc_file"; then
-        echo -e "\n\n# This alias runs the Cursor Setup Wizard, simplifying installation and configuration.\n# For more details, visit: https://github.com/jorcelinojunior/cursor-setup-wizard\n$alias_command\n" >>"$rc_file"
-        alias_added=true
-        if [[ "$(basename "$SHELL")" == "$shell_name" ]]; then
-          echo " 🏷️  Adding the alias \"${SCRIPT_ALIAS_NAME}\" to the current shell..."
-          $(basename "$SHELL") -c "source $rc_file"
-        fi
-      fi
-    fi
-  done
-  
-  if [[ "$alias_added" == true ]]; then
-    echo -e "\n   # The alias \"${SCRIPT_ALIAS_NAME}\" has been successfully added! ✨"
-    echo "   # Open a new terminal to run the script \"Cursor Setup Wizard\""
-    echo "   # using the following command:"
-    echo "     ╭────────────────────╮"
-    echo "     │  $ ${SCRIPT_ALIAS_NAME}    │"
-    echo "     ╰────────────────────╯"
-    echo ""
-    read -rp "   Press any key to close this terminal..." -n1
-    kill -9 $PPID
-  else
-    logg success "The alias '${SCRIPT_ALIAS_NAME}' is already configured. No changes were made."
-  fi
-}
-
 check_and_install_dependencies() {
   spinner "Checking dependencies..." "sleep 1"
   local missing_packages=()
@@ -138,7 +95,10 @@ check_and_install_dependencies() {
   logg success "All dependencies are good to go!"
 }
 
-show_banner() { clear; gum style --border double --border-foreground="$CLR_PRI" --margin "1 0 2 2" --padding "1 3" --align center --foreground="$CLR_LGT" --background="$CLR_BG" "$(echo -e "🧙 Welcome to the Cursor Setup Wizard! 🎉\n 📡 Effortlessly fetch, download, and configure Cursor. 🔧")"; }
+show_banner() { 
+  clear; 
+  gum style --border double --border-foreground="$CLR_PRI" --margin "1 0 2 2" --padding "1 3" --align center --foreground="$CLR_LGT" --background="$CLR_BG" "$(echo -e "🧙 Welcome to the Cursor Setup Wizard! 🎉\n 📡 Effortlessly fetch, download, and configure Cursor. 🔧\n\n This is an improved fork of the original script by jorcelinojunior\n Modified and enhanced by Arcker")"; 
+}
 
 show_balloon() { gum style --border double --border-foreground="$CLR_PRI" --margin "1 2" --padding "1 1" --align center --foreground="$CLR_LGT" "$1"; }
 
@@ -788,6 +748,7 @@ restore_backup() {
 menu() {
   local option
   show_banner
+  
   while true; do
     all_in_one=$(gum style --foreground="$CLR_LGT" --bold "All-in-One (fetch, download & configure all)")
     reconfigure_all=$(gum style --foreground="$CLR_LGT" --bold "Reconfigure All (no online fetch)")
@@ -798,6 +759,12 @@ menu() {
     option=$(echo -e "$all_in_one\n$reconfigure_all\n$setup_apparmor\n$add_cli_command\n$edit_script\n$_exit" | gum choose --header "🧙 Pick what you'd like to do next:" --header.margin="0 0 0 2" --header.border="rounded" --header.padding="0 2 0 2" --header.italic --header.foreground="$CLR_LGT" --cursor=" ➤ " --cursor.foreground="$CLR_ERR" --cursor.background="$CLR_PRI" --selected.foreground="$CLR_LGT" --selected.background="$CLR_PRI")
     case "$option" in
       "$(nostyle "$all_in_one")")
+        if ! check_environment; then
+          logg error "System environment does not meet minimum requirements."
+          continue
+        fi
+        validate_os
+        check_and_install_dependencies
         fetch_remote_version
         if ! find_local_version || [[ "$local_md5" != "$remote_md5" ]]; then
           download_appimage
@@ -811,6 +778,12 @@ menu() {
         fi
         ;;
       "$(nostyle "$reconfigure_all")")
+        if ! check_environment; then
+          logg error "System environment does not meet minimum requirements."
+          continue
+        fi
+        validate_os
+        check_and_install_dependencies
         if find_local_version true; then
           download_logo
           setup_launchers
@@ -819,11 +792,23 @@ menu() {
         fi
         ;;
       "$(nostyle "$setup_apparmor")")
+        if ! check_environment; then
+          logg error "System environment does not meet minimum requirements."
+          continue
+        fi
+        validate_os
+        check_and_install_dependencies
         if find_local_version true; then
           configure_apparmor
         fi
         ;;
       "$(nostyle "$add_cli_command")")
+        if ! check_environment; then
+          logg error "System environment does not meet minimum requirements."
+          continue
+        fi
+        validate_os
+        check_and_install_dependencies
         if find_local_version true; then
           add_cli_command
         fi
@@ -834,7 +819,7 @@ menu() {
       "$(nostyle "$_exit")")
           if gum confirm "Are you sure you want to exit?" --show-help --prompt.foreground="$CLR_WRN" --selected.background="$CLR_PRI"; then
             clear;
-            gum style --border double --border-foreground="$CLR_PRI" --padding "1 3" --margin "1 2" --align center --background "$CLR_BG" --foreground "$CLR_LGT" "$(echo -e "🎩🪄 Thanks for stopping by! Happy coding with Cursor!\n\n Enjoyed this tool? Support it and keep the magic alive!\n☕ Buy me a coffee 🤗\n $(gum style  --foreground="$CLR_WRN" "https://buymeacoffee.com/jorcelinojunior") \n\n Your kindness helps improve this tool for everyone!\n Thank you for your support! 🌻💜 ")"
+            gum style --border double --border-foreground="$CLR_PRI" --padding "1 3" --margin "1 2" --align center --background "$CLR_BG" --foreground "$CLR_LGT" "$(echo -e "🎩🪄 Thanks for stopping by! Happy coding with Cursor!\n\n This is an improved fork of the original script by jorcelinojunior\n Modified and enhanced by Arcker\n\n Enjoyed this tool? Support the original author and keep the magic alive!\n☕ Buy jorcelinojunior a coffee 🤗\n $(gum style  --foreground="$CLR_WRN" "https://buymeacoffee.com/jorcelinojunior") \n\n Your kindness helps improve this tool for everyone!\n Thank you for your support! 🌻💜 ")"
             echo -e " \n\n "
             break
           fi
@@ -881,17 +866,16 @@ main() {
   # Add exit handler
   trap 'cleanup "An unexpected error occurred"' EXIT
   
-  # Check environment
-  if ! check_environment; then
-    logg error "System environment does not meet minimum requirements."
-    exit 1
-  fi
-  
-  validate_os
-  check_and_install_dependencies
-  
   # If --install argument is provided, start installation directly
   if [[ "${INSTALL:-false}" == "true" ]]; then
+    if ! check_environment; then
+      logg error "System environment does not meet minimum requirements."
+      exit 1
+    fi
+    
+    validate_os
+    check_and_install_dependencies
+    
     fetch_remote_version
     if ! find_local_version || [[ "$local_md5" != "$remote_md5" ]]; then
       download_appimage
@@ -909,8 +893,6 @@ main() {
   fi
   
   # Otherwise, continue with normal menu
-  install_script_alias
-  spinner "Initializing the setup wizard..." "sleep 1"
   menu
 }
 
