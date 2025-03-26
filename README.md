@@ -15,16 +15,16 @@ A simple and user-friendly setup wizard for installing and configuring Cursor on
 
 ## Quick Install (Ubuntu/Debian)
 
-Pour installer Cursor en une seule commande, copiez et collez cette ligne dans votre terminal :
+To install Cursor with a single command, copy and paste this line in your terminal:
 
 ```bash
 curl -s https://raw.githubusercontent.com/arcker/cursor-setup-wizard/main/cursor_setup.sh | bash
 ```
 
-Cette commande va :
-1. Télécharger le script
-2. L'exécuter directement
-3. Afficher le menu d'installation
+This command will:
+1. Download the script
+2. Execute it directly
+3. Display the installation menu
 
 ## Manual Installation
 
