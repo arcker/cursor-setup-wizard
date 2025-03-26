@@ -97,7 +97,7 @@ check_and_install_dependencies() {
 
 show_banner() { 
   clear; 
-  gum style --border double --border-foreground="$CLR_PRI" --margin "1 0 2 2" --padding "1 3" --align center --foreground="$CLR_LGT" --background="$CLR_BG" "$(echo -e "🧙 Welcome to the Cursor Setup Wizard! 🎉\n 📡 Effortlessly fetch, download, and configure Cursor. 🔧\n\n This is an improved fork of the original script by jorcelinojunior\n Modified and enhanced by Arcker")"; 
+  gum style --border double --border-foreground="$CLR_PRI" --margin "1 0 2 2" --padding "1 3" --align center --foreground="$CLR_LGT" --background="$CLR_BG" "$(echo -e "🧙 Welcome to the Cursor Setup Wizard! 🎉\n 📡 Effortlessly fetch, download, and configure Cursor. 🔧\n\n This is an improved fork of the original script by jorcelinojunior\n Modified and enhanced by Arcker\n\n Enjoyed this improved version? Support the fork author!\n☕ Buy Arcker a coffee 🤗\n $(gum style  --foreground="$CLR_WRN" "https://buymeacoffee.com/arcker")")"; 
 }
 
 show_balloon() { gum style --border double --border-foreground="$CLR_PRI" --margin "1 2" --padding "1 1" --align center --foreground="$CLR_LGT" "$1"; }
